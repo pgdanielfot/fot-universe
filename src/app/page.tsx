@@ -1,64 +1,133 @@
 import Image from "next/image";
+import { createClient } from "@/lib/supabase/server";
+import { categoryStyle } from "@/lib/categoryStyle";
+import ChatBar from "@/components/ChatBar";
 
-export default function Home() {
+export const revalidate = 0;
+
+export default async function Home() {
+  const supabase = await createClient();
+
+  const { data: categories } = await supabase
+    .from("categories")
+    .select("id, name, color, is_main, links(id, name, url, description, image_url)")
+    .order("sort_order", { ascending: true })
+    .order("sort_order", { referencedTable: "links", ascending: true });
+
+  const all = categories ?? [];
+  const main = all.find((c) => c.is_main) ?? all[0];
+  const rest = all.filter((c) => c.id !== main?.id);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div className="flex min-h-screen flex-col">
+      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col items-center px-8 pb-24 pt-16">
+        <div className="mb-14 mt-6 text-center">
+          <h1 className="font-[family-name:var(--font-display)] text-5xl font-bold tracking-widest glow-title sm:text-6xl">
+            FOT UNIVERSE
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="mt-4 text-sm tracking-wide text-zinc-500">
+            Your gateway to every galaxy in the FOT system
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+
+        <ChatBar />
+
+        {!main ? (
+          <p className="text-zinc-500">
+            No links yet. Run the setup SQL in Supabase, or add some from the admin panel.
+          </p>
+        ) : (
+          <div className="flex w-full flex-col gap-10">
+            <section className="hero-panel rounded-2xl p-8">
+              <div className="mb-6 flex items-center gap-3">
+                <span
+                  className={`h-2.5 w-2.5 rounded-full ${categoryStyle(main.name, main.color).dot} ${categoryStyle(main.name, main.color).ring}`}
+                />
+                <h2 className="font-[family-name:var(--font-display)] text-xs font-semibold uppercase tracking-[0.3em] text-zinc-200">
+                  {main.name}
+                </h2>
+              </div>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {main.links.map((link) => (
+                  <a
+                    key={link.id}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`planet-card flex flex-col items-center gap-2 rounded-xl px-4 py-4 text-center ${categoryStyle(main.name, main.color).border}`}
+                  >
+                    {link.image_url && (
+                      <Image
+                        src={link.image_url}
+                        alt=""
+                        width={40}
+                        height={40}
+                        unoptimized
+                        className="rounded-lg object-cover"
+                      />
+                    )}
+                    <span className="text-sm font-medium text-zinc-100">{link.name}</span>
+                    {link.description && (
+                      <span className="text-xs text-zinc-500">{link.description}</span>
+                    )}
+                  </a>
+                ))}
+                {main.links.length === 0 && (
+                  <p className="col-span-full text-sm text-zinc-500">No links in this category yet.</p>
+                )}
+              </div>
+            </section>
+
+            {rest.length > 0 && (
+              <div className="grid w-full gap-6 sm:grid-cols-2">
+                {rest.map((category) => {
+                  const style = categoryStyle(category.name, category.color);
+                  return (
+                  <section key={category.id} className="glass-panel rounded-2xl p-6">
+                    <div className="mb-5 flex items-center gap-3">
+                      <span className={`h-2 w-2 rounded-full ${style.dot} ${style.ring}`} />
+                      <h2 className="font-[family-name:var(--font-display)] text-xs font-semibold uppercase tracking-[0.25em] text-zinc-300">
+                        {category.name}
+                      </h2>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                      {category.links.map((link) => (
+                        <a
+                          key={link.id}
+                          href={link.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`planet-card flex flex-col items-center gap-2 rounded-xl px-4 py-3 text-center ${style.border}`}
+                        >
+                          {link.image_url && (
+                            <Image
+                              src={link.image_url}
+                              alt=""
+                              width={32}
+                              height={32}
+                              unoptimized
+                              className="rounded-lg object-cover"
+                            />
+                          )}
+                          <span className="text-sm font-medium text-zinc-100">{link.name}</span>
+                          {link.description && (
+                            <span className="text-xs text-zinc-500">{link.description}</span>
+                          )}
+                        </a>
+                      ))}
+                      {category.links.length === 0 && (
+                        <p className="col-span-full text-sm text-zinc-500">
+                          No links in this category yet.
+                        </p>
+                      )}
+                    </div>
+                  </section>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </main>
     </div>
   );
