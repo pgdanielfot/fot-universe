@@ -11,28 +11,42 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function embedOne(text: string): Promise<number[]> {
-  const model = client().getGenerativeModel({ model: EMBEDDING_MODEL });
+function isRetryable(message: string): boolean {
+  return (
+    message.includes("429") ||
+    message.includes("Too Many Requests") ||
+    message.includes("503") ||
+    message.includes("Service Unavailable") ||
+    message.includes("overloaded")
+  );
+}
 
-  for (let attempt = 0; attempt < 5; attempt++) {
+async function withRetry<T>(fn: () => Promise<T>, attempts = 4): Promise<T> {
+  for (let attempt = 0; attempt < attempts; attempt++) {
     try {
-      const result = await model.embedContent({
-        content: { role: "user", parts: [{ text }] },
-        outputDimensionality: EMBEDDING_DIMENSIONS,
-      } as Parameters<typeof model.embedContent>[0]);
-      return result.embedding.values;
+      return await fn();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      const isRateLimit = message.includes("429") || message.includes("Too Many Requests");
-      if (!isRateLimit || attempt === 4) throw error;
+      if (!isRetryable(message) || attempt === attempts - 1) throw error;
 
       const retryMatch = message.match(/"retryDelay":"(\d+)s"/);
-      const delayMs = retryMatch ? Number(retryMatch[1]) * 1000 + 500 : 2000 * (attempt + 1);
+      const delayMs = retryMatch ? Number(retryMatch[1]) * 1000 + 500 : 1500 * (attempt + 1);
       await sleep(delayMs);
     }
   }
-
   throw new Error("Unreachable");
+}
+
+async function embedOne(text: string): Promise<number[]> {
+  const model = client().getGenerativeModel({ model: EMBEDDING_MODEL });
+
+  return withRetry(async () => {
+    const result = await model.embedContent({
+      content: { role: "user", parts: [{ text }] },
+      outputDimensionality: EMBEDDING_DIMENSIONS,
+    } as Parameters<typeof model.embedContent>[0]);
+    return result.embedding.values;
+  }, 5);
 }
 
 export async function embedText(text: string): Promise<number[]> {
@@ -49,7 +63,7 @@ export async function embedTexts(texts: string[]): Promise<number[][]> {
 }
 
 export async function answerWithContext(question: string, context: string): Promise<string> {
-  const model = client().getGenerativeModel({ model: "gemini-flash-latest" });
+  const model = client().getGenerativeModel({ model: "gemini-3.6-flash" });
 
   const prompt = `You are the FOT Universe assistant. FOT Universe is the team's central portal: a directory of internal tools/links, plus a Confluence knowledge base.
 
@@ -66,6 +80,6 @@ ${context}
 
 Question: ${question}`;
 
-  const result = await model.generateContent(prompt);
+  const result = await withRetry(() => model.generateContent(prompt), 3);
   return result.response.text();
 }
