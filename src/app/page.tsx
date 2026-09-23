@@ -3,7 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { categoryStyle } from "@/lib/categoryStyle";
 import ChatBar from "@/components/ChatBar";
 
-export const revalidate = 0;
+// Keep the directory fast for visitors while reflecting admin changes shortly after.
+export const revalidate = 60;
 
 export default async function Home() {
   const supabase = await createClient();
@@ -20,41 +21,58 @@ export default async function Home() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col items-center px-8 pb-24 pt-16">
-        <div className="mb-14 mt-6 text-center">
-          <h1 className="font-[family-name:var(--font-display)] text-5xl font-bold tracking-widest glow-title sm:text-6xl">
+      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-5 pb-20 pt-10 sm:px-8 sm:pt-16">
+        <section className="mx-auto mb-10 w-full max-w-3xl text-center sm:mb-12">
+          <p className="mb-4 text-xs font-semibold uppercase tracking-[0.28em] text-zinc-500">
+            Fulfilment Operations knowledge centre
+          </p>
+          <h1 className="font-[family-name:var(--font-display)] text-4xl font-bold tracking-[0.08em] text-zinc-50 sm:text-6xl">
             FOT UNIVERSE
           </h1>
-          <p className="mt-4 text-sm tracking-wide text-zinc-500">
-            Your gateway to every galaxy in the FOT system
+          <p className="mx-auto mt-5 max-w-xl text-sm leading-6 text-zinc-400 sm:text-base">
+            Find the right tool, learn how FOT works, or ask a question before you ask around.
           </p>
-        </div>
+        </section>
 
-        <ChatBar />
+        <section className="mx-auto mb-10 w-full max-w-3xl sm:mb-12">
+          <div className="mb-3 flex items-center justify-between px-1">
+            <div>
+              <p className="text-sm font-medium text-zinc-100">How can we help?</p>
+              <p className="mt-1 text-xs text-zinc-500">Ask about processes, tools, forms, or onboarding.</p>
+            </div>
+            <span className="hidden rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider text-emerald-300 sm:block">
+              FOT assistant
+            </span>
+          </div>
+          <ChatBar />
+        </section>
 
         {!main ? (
           <p className="text-zinc-500">
             No links yet. Run the setup SQL in Supabase, or add some from the admin panel.
           </p>
         ) : (
-          <div className="flex w-full flex-col gap-10">
-            <section className="hero-panel rounded-2xl p-8">
-              <div className="mb-6 flex items-center gap-3">
+          <div className="flex w-full flex-col gap-8">
+            <section className="hero-panel rounded-3xl p-5 sm:p-8">
+              <div className="mb-6 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
                 <span
                   className={`h-2.5 w-2.5 rounded-full ${categoryStyle(main.name, main.color).dot} ${categoryStyle(main.name, main.color).ring}`}
                 />
-                <h2 className="font-[family-name:var(--font-display)] text-xs font-semibold uppercase tracking-[0.3em] text-zinc-200">
+                <h2 className="font-[family-name:var(--font-display)] text-xs font-semibold uppercase tracking-[0.24em] text-zinc-100">
                   {main.name}
                 </h2>
+                </div>
+                <span className="text-xs text-zinc-500">Most used tools</span>
               </div>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {main.links.map((link) => (
                   <a
                     key={link.id}
                     href={link.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`planet-card flex flex-col items-center gap-2 rounded-xl px-4 py-4 text-center ${categoryStyle(main.name, main.color).border}`}
+                    className={`planet-card group flex min-h-28 flex-row items-center gap-3 rounded-2xl px-4 py-4 text-left sm:flex-col sm:items-center sm:text-center ${categoryStyle(main.name, main.color).border}`}
                   >
                     {link.image_url && (
                       <Image
@@ -63,13 +81,10 @@ export default async function Home() {
                         width={40}
                         height={40}
                         unoptimized
-                        className="rounded-lg object-cover"
+                        className="h-10 w-10 shrink-0 rounded-lg object-cover"
                       />
                     )}
-                    <span className="text-sm font-medium text-zinc-100">{link.name}</span>
-                    {link.description && (
-                      <span className="text-xs text-zinc-500">{link.description}</span>
-                    )}
+                    <span className="min-w-0"><span className="block text-sm font-medium text-zinc-100">{link.name}</span>{link.description && <span className="mt-1 block text-xs leading-5 text-zinc-500">{link.description}</span>}</span>
                   </a>
                 ))}
                 {main.links.length === 0 && (
@@ -79,25 +94,25 @@ export default async function Home() {
             </section>
 
             {rest.length > 0 && (
-              <div className="grid w-full gap-6 sm:grid-cols-2">
+              <div className="grid w-full gap-5 sm:grid-cols-2">
                 {rest.map((category) => {
                   const style = categoryStyle(category.name, category.color);
                   return (
-                  <section key={category.id} className="glass-panel rounded-2xl p-6">
+                  <section key={category.id} className="glass-panel rounded-2xl p-5 sm:p-6">
                     <div className="mb-5 flex items-center gap-3">
                       <span className={`h-2 w-2 rounded-full ${style.dot} ${style.ring}`} />
-                      <h2 className="font-[family-name:var(--font-display)] text-xs font-semibold uppercase tracking-[0.25em] text-zinc-300">
+                      <h2 className="font-[family-name:var(--font-display)] text-xs font-semibold uppercase tracking-[0.2em] text-zinc-200">
                         {category.name}
                       </h2>
                     </div>
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                       {category.links.map((link) => (
                         <a
                           key={link.id}
                           href={link.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className={`planet-card flex flex-col items-center gap-2 rounded-xl px-4 py-3 text-center ${style.border}`}
+                          className={`planet-card flex min-h-16 flex-row items-center gap-3 rounded-xl px-3 py-3 text-left ${style.border}`}
                         >
                           {link.image_url && (
                             <Image
@@ -106,13 +121,10 @@ export default async function Home() {
                               width={32}
                               height={32}
                               unoptimized
-                              className="rounded-lg object-cover"
+                            className="h-8 w-8 shrink-0 rounded-lg object-cover"
                             />
                           )}
-                          <span className="text-sm font-medium text-zinc-100">{link.name}</span>
-                          {link.description && (
-                            <span className="text-xs text-zinc-500">{link.description}</span>
-                          )}
+                          <span className="min-w-0"><span className="block text-sm font-medium text-zinc-100">{link.name}</span>{link.description && <span className="mt-0.5 block truncate text-xs text-zinc-500">{link.description}</span>}</span>
                         </a>
                       ))}
                       {category.links.length === 0 && (

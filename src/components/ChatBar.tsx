@@ -54,8 +54,8 @@ export default function ChatBar() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function ask() {
-    const text = input.trim();
+  async function ask(prompt = input) {
+    const text = prompt.trim();
     if (!text || loading) return;
 
     setQuestion(text);
@@ -81,8 +81,8 @@ export default function ChatBar() {
   }
 
   return (
-    <div className="mb-10 w-full max-w-2xl">
-      <div className="hero-panel flex items-center gap-3 rounded-full px-5 py-3">
+    <div className="w-full">
+      <div className="hero-panel flex items-center gap-3 rounded-2xl px-4 py-3 shadow-[0_12px_40px_rgba(0,0,0,0.16)] sm:rounded-full sm:px-5">
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -91,7 +91,7 @@ export default function ChatBar() {
           className="flex-1 bg-transparent text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none"
         />
         <button
-          onClick={ask}
+          onClick={() => ask()}
           disabled={loading}
           className="rounded-full bg-zinc-100 px-4 py-1.5 text-xs font-medium text-zinc-900 hover:opacity-90 disabled:opacity-50"
         >
@@ -99,11 +99,26 @@ export default function ChatBar() {
         </button>
       </div>
 
+      {!loading && !answer && !error && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {["Where can I find the brief form?", "How do I create a listing?", "Show training videos"].map((prompt) => (
+            <button
+              key={prompt}
+              onClick={() => { setInput(prompt); ask(prompt); }}
+              className="rounded-full border border-white/10 bg-white/[0.02] px-3 py-1.5 text-xs text-zinc-400 transition hover:border-white/25 hover:bg-white/[0.06] hover:text-zinc-100"
+            >
+              {prompt}
+            </button>
+          ))}
+        </div>
+      )}
+
       {(loading || answer || error) && (
         <div className="glass-panel mt-3 max-h-[28rem] overflow-y-auto rounded-2xl px-5 py-4 text-left">
-          <p className="mb-3 text-xs font-medium uppercase tracking-widest text-zinc-500">
-            {question}
-          </p>
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <p className="text-xs font-medium uppercase tracking-widest text-zinc-500">{question}</p>
+            {!loading && <button onClick={() => { setAnswer(null); setError(null); setQuestion(""); }} className="shrink-0 text-xs text-zinc-500 hover:text-zinc-200">Clear</button>}
+          </div>
 
           {loading && (
             <div className="flex items-center gap-2 text-sm text-zinc-500">
