@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { categoryStyle } from "@/lib/categoryStyle";
 import ChatBar from "@/components/ChatBar";
@@ -21,6 +22,15 @@ export default async function Home() {
 
   return (
     <div className="flex min-h-screen flex-col">
+      <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-5 pt-5 sm:px-8 sm:pt-7">
+        <span className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">FOT</span>
+        <Link
+          href="/admin"
+          className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-zinc-300 transition hover:border-sky-300/35 hover:bg-sky-300/10 hover:text-sky-100"
+        >
+          Admin access
+        </Link>
+      </header>
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-5 pb-20 pt-10 sm:px-8 sm:pt-16">
         <section className="mx-auto mb-10 w-full max-w-3xl text-center sm:mb-12">
           <p className="mb-4 text-xs font-semibold uppercase tracking-[0.28em] text-zinc-500">
