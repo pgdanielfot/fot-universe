@@ -5,47 +5,26 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 type Video = { title: string; src: string; embed: boolean };
+type Answer = { text: string; sources: { url: string; title: string }[]; videos: Video[]; fast?: boolean };
 
-type Answer = {
-  text: string;
-  sources: { url: string; title: string }[];
-  videos: Video[];
-};
+function FOTSpark() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5 text-sky-300">
+      <path d="M12 2.5 14 10l7.5 2-7.5 2-2 7.5-2-7.5-7.5-2 7.5-2 2-7.5Z" fill="currentColor" opacity=".95" />
+      <circle cx="19.5" cy="4.5" r="1.2" fill="currentColor" opacity=".7" />
+    </svg>
+  );
+}
 
 const markdownComponents = {
   p: (props: React.ComponentProps<"p">) => <p className="mb-2 last:mb-0" {...props} />,
-  strong: (props: React.ComponentProps<"strong">) => (
-    <strong className="font-semibold text-white" {...props} />
-  ),
-  ul: (props: React.ComponentProps<"ul">) => (
-    <ul className="mb-2 ml-4 list-disc space-y-1 last:mb-0" {...props} />
-  ),
-  ol: (props: React.ComponentProps<"ol">) => (
-    <ol className="mb-2 ml-4 list-decimal space-y-1 last:mb-0" {...props} />
-  ),
-  li: (props: React.ComponentProps<"li">) => <li className="pl-1" {...props} />,
-  h1: (props: React.ComponentProps<"h1">) => (
-    <h3 className="mb-1.5 mt-3 text-xs font-semibold uppercase tracking-widest text-zinc-300 first:mt-0" {...props} />
-  ),
-  h2: (props: React.ComponentProps<"h2">) => (
-    <h3 className="mb-1.5 mt-3 text-xs font-semibold uppercase tracking-widest text-zinc-300 first:mt-0" {...props} />
-  ),
-  h3: (props: React.ComponentProps<"h3">) => (
-    <h3 className="mb-1.5 mt-3 text-xs font-semibold uppercase tracking-widest text-zinc-300 first:mt-0" {...props} />
-  ),
-  code: (props: React.ComponentProps<"code">) => (
-    <code className="rounded bg-white/10 px-1 py-0.5 text-[13px] text-zinc-100" {...props} />
-  ),
-  a: (props: React.ComponentProps<"a">) => (
-    <a
-      className="text-zinc-100 underline underline-offset-2 hover:text-white"
-      target="_blank"
-      rel="noopener noreferrer"
-      {...props}
-    />
-  ),
-  hr: () => <hr className="my-3 border-white/10" />,
+  strong: (props: React.ComponentProps<"strong">) => <strong className="font-semibold text-white" {...props} />,
+  ul: (props: React.ComponentProps<"ul">) => <ul className="my-3 space-y-2" {...props} />,
+  li: (props: React.ComponentProps<"li">) => <li className="rounded-lg bg-white/[0.035] px-3 py-2" {...props} />,
+  a: (props: React.ComponentProps<"a">) => <a className="font-medium text-sky-200 underline decoration-sky-300/40 underline-offset-4 hover:text-white" target="_blank" rel="noopener noreferrer" {...props} />,
 };
+
+const suggestions = ["Where can I find the brief form?", "How do I create a listing?", "Show training videos"];
 
 export default function ChatBar() {
   const [input, setInput] = useState("");
@@ -54,128 +33,67 @@ export default function ChatBar() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function ask(prompt = input) {
-    const text = prompt.trim();
+  async function search(query = input) {
+    const text = query.trim();
     if (!text || loading) return;
 
     setQuestion(text);
+    setInput("");
     setAnswer(null);
     setError(null);
     setLoading(true);
 
     try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Something went wrong");
-
-      setAnswer({ text: data.answer, sources: data.sources ?? [], videos: data.videos ?? [] });
+      const response = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: text }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? "Unable to search right now.");
+      setAnswer({ text: data.answer, sources: data.sources ?? [], videos: data.videos ?? [], fast: data.fast });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong. Try again.");
+      setError(err instanceof Error ? err.message : "Unable to search right now.");
     } finally {
       setLoading(false);
     }
   }
 
+  function reset() {
+    setAnswer(null);
+    setError(null);
+    setQuestion("");
+    setInput("");
+  }
+
   return (
     <div className="w-full">
-      <div className="hero-panel flex items-center gap-3 rounded-2xl px-4 py-3 shadow-[0_12px_40px_rgba(0,0,0,0.16)] sm:rounded-full sm:px-5">
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && ask()}
-          placeholder="Ask the FOT Universe assistant anything..."
-          className="flex-1 bg-transparent text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none"
-        />
-        <button
-          onClick={() => ask()}
-          disabled={loading}
-          className="rounded-full bg-zinc-100 px-4 py-1.5 text-xs font-medium text-zinc-900 hover:opacity-90 disabled:opacity-50"
-        >
-          {loading ? "Asking..." : "Ask"}
+      <form onSubmit={(event) => { event.preventDefault(); search(); }} className="search-shell flex items-center gap-3 rounded-2xl px-4 py-3">
+        <FOTSpark />
+        <input value={input} onChange={(event) => setInput(event.target.value)} placeholder="Ask a question about FOT…" className="min-w-0 flex-1 bg-transparent text-sm text-white placeholder:text-slate-500 focus:outline-none" />
+        <button type="submit" disabled={loading || !input.trim()} className="rounded-xl bg-sky-300 px-4 py-2 text-xs font-semibold text-slate-950 transition hover:bg-sky-200 disabled:cursor-not-allowed disabled:opacity-40">
+          {loading ? "Searching" : "Search"}
         </button>
-      </div>
+      </form>
 
-      {!loading && !answer && !error && (
+      {!answer && !loading && !error && (
         <div className="mt-3 flex flex-wrap gap-2">
-          {["Where can I find the brief form?", "How do I create a listing?", "Show training videos"].map((prompt) => (
-            <button
-              key={prompt}
-              onClick={() => { setInput(prompt); ask(prompt); }}
-              className="rounded-full border border-white/10 bg-white/[0.02] px-3 py-1.5 text-xs text-zinc-400 transition hover:border-white/25 hover:bg-white/[0.06] hover:text-zinc-100"
-            >
-              {prompt}
-            </button>
-          ))}
+          {suggestions.map((suggestion) => <button key={suggestion} onClick={() => search(suggestion)} className="rounded-lg px-2.5 py-1.5 text-xs text-slate-400 transition hover:bg-white/[0.06] hover:text-slate-100">{suggestion}</button>)}
         </div>
       )}
 
       {(loading || answer || error) && (
-        <div className="glass-panel mt-3 max-h-[28rem] overflow-y-auto rounded-2xl px-5 py-4 text-left">
-          <div className="mb-3 flex items-start justify-between gap-3">
-            <p className="text-xs font-medium uppercase tracking-widest text-zinc-500">{question}</p>
-            {!loading && <button onClick={() => { setAnswer(null); setError(null); setQuestion(""); }} className="shrink-0 text-xs text-zinc-500 hover:text-zinc-200">Clear</button>}
+        <section className="glass-panel mt-4 rounded-2xl p-4 text-left sm:p-5">
+          <div className="mb-4 flex items-start justify-between gap-4 border-b border-white/10 pb-3">
+            <div><p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">{loading ? "Searching FOT knowledge" : answer?.fast ? "Quick result" : "FOT answer"}</p><p className="mt-1 text-sm font-medium text-slate-100">{question}</p></div>
+            {!loading && <button onClick={reset} className="rounded-lg border border-white/10 px-2.5 py-1.5 text-xs text-slate-400 hover:border-white/20 hover:text-white">New search</button>}
           </div>
 
-          {loading && (
-            <div className="flex items-center gap-2 text-sm text-zinc-500">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-zinc-400" />
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-zinc-400 [animation-delay:150ms]" />
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-zinc-400 [animation-delay:300ms]" />
-              <span className="ml-1">Thinking…</span>
-            </div>
-          )}
-          {error && <p className="text-sm text-red-400">{error}</p>}
+          {loading && <div className="flex items-center gap-2 py-2 text-sm text-slate-400"><span className="h-2 w-2 animate-pulse rounded-full bg-sky-300" /><span>Looking through FOT tools and knowledge…</span></div>}
+          {error && <p className="text-sm text-rose-300">{error}</p>}
 
-          {answer && (
-            <>
-              <div className="text-sm leading-relaxed text-zinc-100">
-                <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-                  {answer.text}
-                </ReactMarkdown>
-              </div>
-
-              {answer.videos.length > 0 && (
-                <div className="mt-4 flex flex-col gap-3">
-                  {answer.videos.map((v, i) => (
-                    <div key={i} className="overflow-hidden rounded-xl border border-white/10">
-                      {v.embed ? (
-                        <iframe
-                          src={v.src}
-                          title={v.title}
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                          allowFullScreen
-                          className="aspect-video w-full"
-                        />
-                      ) : (
-                        <video src={v.src} controls className="aspect-video w-full bg-black" />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {answer.sources.length > 0 && (
-                <div className="mt-4 flex flex-wrap gap-2 border-t border-white/10 pt-3">
-                  {answer.sources.map((s) => (
-                    <a
-                      key={s.url}
-                      href={s.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="rounded-full border border-white/10 px-3 py-1 text-[11px] text-zinc-400 hover:border-white/30 hover:text-zinc-200"
-                    >
-                      {s.title}
-                    </a>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-        </div>
+          {answer && <>
+            <div className="text-sm leading-6 text-slate-200"><ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{answer.text}</ReactMarkdown></div>
+            {answer.videos.length > 0 && <div className="mt-5 space-y-3">{answer.videos.map((video, index) => <div key={index} className="overflow-hidden rounded-xl border border-white/10">{video.embed ? <iframe src={video.src} title={video.title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen className="aspect-video w-full" /> : <video src={video.src} controls className="aspect-video w-full bg-black" />}</div>)}</div>}
+            {answer.sources.length > 0 && <div className="mt-5 flex flex-wrap gap-2 border-t border-white/10 pt-4">{answer.sources.map((source) => <a key={source.url} href={source.url} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-white/10 px-2.5 py-1.5 text-xs text-slate-400 hover:border-sky-300/30 hover:text-sky-100">{source.title} ↗</a>)}</div>}
+          </>}
+        </section>
       )}
     </div>
   );
