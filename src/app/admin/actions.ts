@@ -1,8 +1,13 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+
+function refreshDirectory() {
+  updateTag("fot-public-directory");
+  revalidatePath("/");
+}
 
 async function uploadLinkImage(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -48,7 +53,7 @@ export async function addLink(formData: FormData) {
     category_id: categoryId,
     sort_order: nextSortOrder,
   });
-  revalidatePath("/");
+  refreshDirectory();
   revalidatePath("/admin");
 }
 
@@ -72,7 +77,7 @@ export async function editLink(formData: FormData) {
       ...(imageUrl ? { image_url: imageUrl } : {}),
     })
     .eq("id", id);
-  revalidatePath("/");
+  refreshDirectory();
   revalidatePath("/admin");
 }
 
@@ -85,7 +90,7 @@ export async function reorderLinks(categoryId: string, orderedIds: string[]) {
     )
   );
 
-  revalidatePath("/");
+  refreshDirectory();
   revalidatePath("/admin");
 }
 
@@ -95,7 +100,7 @@ export async function deleteLink(formData: FormData) {
   if (!id) return;
 
   await supabase.from("links").delete().eq("id", id);
-  revalidatePath("/");
+  refreshDirectory();
   revalidatePath("/admin");
 }
 
@@ -116,7 +121,7 @@ export async function addCategory(formData: FormData) {
   await supabase
     .from("categories")
     .insert({ name, color: color || null, sort_order: nextSortOrder });
-  revalidatePath("/");
+  refreshDirectory();
   revalidatePath("/admin");
 }
 
@@ -129,7 +134,7 @@ export async function reorderCategories(orderedIds: string[]) {
     )
   );
 
-  revalidatePath("/");
+  refreshDirectory();
   revalidatePath("/admin");
 }
 
@@ -140,7 +145,7 @@ export async function setMainCategory(formData: FormData) {
 
   await supabase.from("categories").update({ is_main: false }).neq("id", id);
   await supabase.from("categories").update({ is_main: true }).eq("id", id);
-  revalidatePath("/");
+  refreshDirectory();
   revalidatePath("/admin");
 }
 
@@ -150,7 +155,7 @@ export async function deleteCategory(formData: FormData) {
   if (!id) return;
 
   await supabase.from("categories").delete().eq("id", id);
-  revalidatePath("/");
+  refreshDirectory();
   revalidatePath("/admin");
 }
 
